@@ -83,12 +83,12 @@ let string_of_tree_time tree =
   if time_min.tm_year = time_max.tm_year &&
      time_min.tm_mon  = time_max.tm_mon  &&
      time_min.tm_mday = time_max.tm_mday then
-    Printf.sprintf "from %d/%d/%d %d:%d to %d:%d"
+    Printf.sprintf "from %02d/%02d/%04d %02d:%02d to %02d:%02d"
       time_min.tm_mday time_min.tm_mon (time_min.tm_year + 1900)
       time_min.tm_hour time_min.tm_min
       time_max.tm_hour time_max.tm_min
   else
-    Printf.sprintf "from %d/%d/%d %d:%d to %d/%d/%d %d:%d"
+    Printf.sprintf "from %02d/%02d/%04d %02d:%02d to %02d/%02d/%04d %02d:%02d"
       time_min.tm_mday time_min.tm_mon (time_min.tm_year + 1900)
       time_min.tm_hour time_min.tm_min
       time_max.tm_mday time_max.tm_mon (time_max.tm_year + 1900)

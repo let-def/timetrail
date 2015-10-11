@@ -1,13 +1,13 @@
-let s:cmdcount = 0
+let s:cmdcount = strftime("%s") % 300
 
 function! timetrail#log(p)
   if ((!exists("b:timetrail_tick") || b:timetrail_tick != b:changedtick) && (a:p != ""))
-    execute "silent! timetrail-log " . shellescape(a:p, 1)
+    execute "silent ! timetrail-log " . shellescape(a:p, 1)
     let b:timetrail_tick = b:changedtick
 
     let s:cmdcount += 1
     if s:cmdcount > 300
-      execute "silent! timetrail-compact"
+      execute "silent ! timetrail-compact"
       let s:cmdcount = 0
     endif
   endif
