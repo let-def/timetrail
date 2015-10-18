@@ -84,14 +84,14 @@ let string_of_tree_time tree =
      time_min.tm_mon  = time_max.tm_mon  &&
      time_min.tm_mday = time_max.tm_mday then
     Printf.sprintf "from %02d/%02d/%04d %02d:%02d to %02d:%02d"
-      time_min.tm_mday time_min.tm_mon (time_min.tm_year + 1900)
+      time_min.tm_mday (time_min.tm_mon + 1) (time_min.tm_year + 1900)
       time_min.tm_hour time_min.tm_min
       time_max.tm_hour time_max.tm_min
   else
     Printf.sprintf "from %02d/%02d/%04d %02d:%02d to %02d/%02d/%04d %02d:%02d"
-      time_min.tm_mday time_min.tm_mon (time_min.tm_year + 1900)
+      time_min.tm_mday (time_min.tm_mon + 1) (time_min.tm_year + 1900)
       time_min.tm_hour time_min.tm_min
-      time_max.tm_mday time_max.tm_mon (time_max.tm_year + 1900)
+      time_max.tm_mday (time_max.tm_mon + 1) (time_max.tm_year + 1900)
       time_max.tm_hour time_max.tm_min
 
 module Counter : sig
