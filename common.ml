@@ -64,7 +64,7 @@ let trail_path = lazy begin
   create_directory dir;
   let dir = Filename.concat dir (string_of_int (tm_year + 1900)) in
   create_directory dir;
-  Filename.concat dir (string_of_int (tm_mon + 1))
+  Filename.concat dir (string_of_int (tm_mon + 1) ^ "." ^ Unix.gethostname ())
 end
 
 (* Entries *)
