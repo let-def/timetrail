@@ -159,10 +159,10 @@ let main () =
   let args = [
     ("-min", Arg.Set_float min_date, "Enables verbose mode");
     ("-max", Arg.Set_float max_date, "Sets maximum number of files to list");
-    ("-p", Arg.String ((+:=) paths), "Filter paths");
+    ("-d", Arg.String ((+:=) dataset), "Read from this file/directory");
   ] in
   let usage_msg = "Format timetrail records" in
-  Arg.parse args ((+:=) dataset) usage_msg;
+  Arg.parse args ((+:=) paths) usage_msg;
   let dataset = match !dataset with
     | [] -> default_dataset ()
     | l -> l

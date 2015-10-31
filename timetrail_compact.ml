@@ -37,7 +37,7 @@ let main () =
   in
   List.iter (fun p ->
       if not (Sys.file_exists p) then
-        Printf.eprintf "# Skipping %s, file doest not exist\n" p
+        Printf.eprintf "# Skipping %s, file doesn't not exist\n" p
       else
         recover ("filtering " ^ p) (fun () -> process_path p)
     ) args
