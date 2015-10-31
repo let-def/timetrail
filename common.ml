@@ -21,7 +21,7 @@ let protect f ~finally =
 let is_prefix_of prefix ~subject =
   String.length subject >= String.length prefix &&
   try
-    for i = 0 to String.length prefix - 1 do
+    for i = String.length prefix - 1 downto 0 do
       if subject.[i] <> prefix.[i] then
         raise Not_found
     done;
@@ -77,7 +77,7 @@ type entry = {
 let rec load_entries filter ic acc =
   match Scanf.fscanf ic "%f\t%s\n" (fun time text -> {time; text}) with
   | entry when filter entry -> load_entries filter ic (entry :: acc)
-  | _ -> acc
+  | _ -> load_entries filter ic acc
   | exception End_of_file -> acc
 
 let load_entries ?(filter=fun _ -> true) ic acc =
