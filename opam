@@ -16,9 +16,9 @@ depends: [
 ]
 post-messages: [
   "Emacs: "
-  "  (add-to-list 'load-path \"%{share}%\")"
+  "  (add-to-list 'load-path \"%{share}%/timetrail\")"
   "  (require 'timetrail)"
   ""
   "Vim: "
-  "  source %{share}%/timetrail.vim"
+  "  source %{share}%/timetrail/timetrail.vim"
 ]
