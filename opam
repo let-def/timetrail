@@ -1,0 +1,24 @@
+opam-version: "1.2"
+name: "timetrail"
+version: "0.1"
+maintainer: "Frederic Bour <frederic.bour@lakaban.net>"
+authors: "Frederic Bour <frederic.bour@lakaban.net>"
+homepage: "https://github.com/def-lkb/timetrail"
+bug-reports: "https://github.com/def-lkb/timetrail"
+license: "CC0"
+dev-repo: "https://github.com/def-lkb/timetrail.git"
+build: [
+  [make]
+]
+depends: [
+  "ocamlfind" {build}
+  "grenier"
+]
+post-messages: [
+  "Emacs: "
+  "  (add-to-list 'load-path \"%{share}%\")"
+  "  (require 'timetrail)"
+  ""
+  "Vim: "
+  "  source %{share}%/timetrail.vim"
+]
