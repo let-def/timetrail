@@ -1,0 +1,10 @@
+bin: [
+  "timetrail"
+  "timetrail-compact"
+  "timetrail-log"
+]
+
+share: [
+  "timetrail.el"
+  "timetrail.vim"
+]
