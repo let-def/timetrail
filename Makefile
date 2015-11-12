@@ -1,4 +1,4 @@
-export PACKS = unix grenier.hll
+export PACKS = unix grenier.hll sturgeon
 
 define PROJ_timetrail
   SOURCES = common.ml timetrail.ml
@@ -18,8 +18,14 @@ define PROJ_timetrail_log
 endef
 export PROJ_timetrail_log
 
+define PROJ_timetrail_sturgeon
+  SOURCES = common.ml timetrail_sturgeon.ml
+  RESULT = timetrail-sturgeon
+endef
+export PROJ_timetrail_sturgeon
+
 ifndef SUBPROJS
-  export SUBPROJS = timetrail timetrail_compact timetrail_log
+  export SUBPROJS = timetrail timetrail_compact timetrail_log timetrail_sturgeon
 endif
 
 all: native-code
