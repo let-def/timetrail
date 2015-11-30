@@ -48,13 +48,23 @@ let make_tree l =
   subtree 0 "" l
 
 let paths = ref []
-let min_date = ref neg_infinity
-let max_date = ref infinity
+
+let tm = {
+  (Unix.gmtime (Unix.time ())) with
+  Unix.
+  tm_sec = 0;
+  tm_min = 0;
+  tm_hour = 0;
+  tm_mday = 0;
+}
+
+let min_date = ref (fst (Unix.mktime {tm with Unix.tm_mday = 1}))
+let max_date = ref (fst (Unix.mktime {tm with Unix.tm_mon = tm.Unix.tm_mon + 1}))
 
 let pass_filter entry =
   entry.time >= !min_date &&
   entry.time <= !max_date &&
-  !paths = [] || List.exists (is_prefix_of ~subject:entry.text) !paths
+  (!paths = [] || List.exists (is_prefix_of ~subject:entry.text) !paths)
 
 let rec loadinput path acc =
   try
@@ -218,8 +228,8 @@ let print_tree tree =
 
 let main () =
   let args = [
-    ("-min", Arg.Set_float min_date, "Enables verbose mode");
-    ("-max", Arg.Set_float max_date, "Sets maximum number of files to list");
+    ("-min", Arg.Set_float min_date, " Filter dates before");
+    ("-max", Arg.Set_float max_date, " Filter dates after");
     ("-d", Arg.String ((+:=) dataset), "Read from this file/directory");
     ("-depth", Arg.Set_int max_level, "Maximum depth when printing tree");
   ] in
