@@ -60,11 +60,6 @@ let make_tree l =
   in
   subtree 0 "" l
 
-let paths = ref (try [Sys.getenv "HOME"] with Not_found -> [])
-
-let pass_filter entry =
-  !paths = [] || List.exists (is_prefix_of ~subject:entry.text) !paths
-
 let rec loadinput path acc =
   try
     if Sys.is_directory path then
@@ -73,7 +68,7 @@ let rec loadinput path acc =
         acc (Sys.readdir path)
     else
       let ic = open_in path in
-      protect (fun () -> load_entries ~filter:pass_filter ic acc)
+      protect (fun () -> load_entries ic acc)
         ~finally:(fun () -> close_in_noerr ic)
   with exn ->
     Printf.eprintf "Couldn't load %s: %s\n"
@@ -160,11 +155,18 @@ let rec annotate counter0 offset0 tree =
   Counter.merge ~into:counter0 counter;
   Time_tree.make (tree.name, offset, local, total) tree.entries children
 
-let annotate tree = annotate (Counter.create ()) (-1) tree
+let annotate path tree =
+  let offset =
+    match List.rev path with
+    | x :: xs -> String.length (String.concat "/" xs)
+    | [] -> -1
+  in
+  annotate (Counter.create ()) offset tree
 
-let rec print_node ui tree =
+let rec print_node action ui path tree =
   let render ui' =
     let ((name, _), offset, local, total) = tree.name in
+    let path = name :: path in
     List.iter (fun entry ->
         text (Tree.add ui') @@
         if offset = 0 then entry.text else
@@ -174,23 +176,25 @@ let rec print_node ui tree =
       (List.sort_uniq compare_entry_text_only tree.entries);
     if tree.entries <> [] && tree.children <> [] then
       printf (Tree.add ui')
-        "- spent %s %s"
+        "⌛ spent %s %s"
         (string_of_time_spent local)
         (string_of_entries_time tree.entries);
-    List.iter (print_node ui') tree.children;
+    List.iter (print_node action ui' path) tree.children;
   in
   let ((name, opened), offset, local, total) = tree.name in
-  printf (Tree.add ui ~opened ~children:render)
-    "%s (spent %s %s)" name
+  let node = Tree.add ui ~opened ~children:render in
+  link node name (fun _ -> action (List.rev (name :: path)));
+  printf node "(spent %s %s)"
     (string_of_time_spent total)
     (string_of_tree_time tree)
 
-let print_node ui =
-  let rec aux = function
+let print_node ui tree path action =
+  (*let rec aux = function
     | { entries = []; children = [tree] } -> aux tree
-    | tree -> print_node ui tree
+    | tree -> print_node action ui tree
   in
-  aux
+    aux*)
+  print_node action ui (List.rev path) tree
 
 let months t =
   let months = Hashtbl.create 7 in
@@ -229,7 +233,9 @@ let print_months k months f =
     text k "]"
   in
   List.iter print months;
-  text k "\n"
+  text k "\n\n";
+  f None
+
 
 let time_of = function
   | None -> (neg_infinity, infinity)
@@ -256,6 +262,30 @@ let filter_time (min,max) =
   in
   filter_tree
 
+let filter_path path tree =
+  let rec aux acc tree = function
+    | [] -> List.rev acc, tree
+    | x :: xs ->
+      match List.find (fun e -> fst e.name = x) tree.children with
+      | tree -> aux (x :: acc) tree xs
+      | exception Not_found -> List.rev acc, tree
+  in
+  match path with
+  | x :: xs when fst tree.name = x ->
+    aux [x] tree xs
+  | _ -> [], tree
+
+let path_selector path cursor f =
+  let rec aux acc = function
+    | [] -> ()
+    | x :: xs ->
+      let acc = x :: acc in
+      text cursor " ";
+      link cursor ("["^x^"]") (fun _ -> f (List.rev acc));
+      aux acc xs
+  in
+  aux [] path
+
 let main ~args:_ ~set_title cursor =
   let dataset = match !dataset with
     | [] -> default_dataset ()
@@ -263,12 +293,32 @@ let main ~args:_ ~set_title cursor =
   in
   let entries = List.fold_right loadinput dataset [] in
   let tree = make_tree entries in
-  let k_months = sub cursor in
-  let widget = Tree.make cursor in
-  print_months k_months (months tree) @@ fun month ->
-  Tree.clear widget;
-  let tree = filter_time (time_of month) tree in
-  let tree = annotate tree in
-  print_node widget tree
+  let rec print_path path nav =
+    let path, tree = filter_path path tree in
+    path_selector path (Nav.title nav) (path_action nav);
+    let wmonths = sub (Nav.body nav) in
+    let wtree = Tree.make (Nav.body nav) in
+    print_months wmonths (months tree) @@ fun month ->
+    Tree.clear wtree;
+    let tree = filter_time (time_of month) tree in
+    snd tree.name := true;
+    let tree = annotate path tree in
+    print_node wtree tree path (path_action nav)
+
+  and path_action nav path =
+    Nav.modal nav "" (print_path path)
+  in
+  let path =
+    try
+      let rec aux acc path =
+        let file = Filename.basename path in
+        let dir = Filename.dirname path in
+        if dir = path then acc
+        else aux (file :: acc) dir
+      in
+      "" :: "" :: aux [] (Sys.getenv "HOME")
+    with Not_found -> []
+  in
+  Nav.make cursor "" (print_path path)
 
 let () = Sturgeon.Recipes.text_command main
