@@ -1,5 +1,7 @@
 open Common
-open Sturgeon.Tui
+open Inuit
+open Cursor
+open Widget
 
 module Time_tree : sig
   type 'a t = private {
@@ -168,14 +170,14 @@ let rec print_node action ui path tree =
     let ((name, _), offset, local, total) = tree.name in
     let path = name :: path in
     List.iter (fun entry ->
-        text (Tree.add ui') @@
+        Cursor.text (Widget.Tree.add ui') @@
         if offset = 0 then entry.text else
           let len = String.length entry.text in
           String.sub entry.text offset (len - offset)
       )
       (List.sort_uniq compare_entry_text_only tree.entries);
     if tree.entries <> [] && tree.children <> [] then
-      printf (Tree.add ui')
+      printf (Widget.Tree.add ui')
         "⌛ spent %s %s"
         (string_of_time_spent local)
         (string_of_entries_time tree.entries);
@@ -183,7 +185,7 @@ let rec print_node action ui path tree =
   in
   let ((name, opened), offset, local, total) = tree.name in
   let node = Tree.add ui ~opened ~children:render in
-  link node name (fun _ -> action (List.rev (name :: path)));
+  link node "%s" name (fun _ -> action (List.rev (name :: path)));
   printf node "(spent %s %s)"
     (string_of_time_spent total)
     (string_of_tree_time tree)
@@ -228,7 +230,7 @@ let print_months k months f =
   in
   let print (year,mon) =
     text k " [";
-    link k (Printf.sprintf "%04d-%02d" (year + 1900) (mon + 1))
+    link k "%04d-%02d" (year + 1900) (mon + 1)
       (action (Some (year,mon)));
     text k "]"
   in
@@ -281,23 +283,24 @@ let path_selector path cursor f =
     | x :: xs ->
       let acc = x :: acc in
       text cursor " ";
-      link cursor ("["^x^"]") (fun _ -> f (List.rev acc));
+      link cursor "[%s]" x (fun _ -> f (List.rev acc));
       aux acc xs
   in
   aux [] path
 
-let main ~args:_ ~set_title cursor =
+let main ~args:_ shell =
+  let cursor = Sturgeon_stui.create_cursor shell ~name:"timetrail" in
   let dataset = match !dataset with
     | [] -> default_dataset ()
     | l -> l
   in
   let entries = List.fold_right loadinput dataset [] in
   let tree = make_tree entries in
-  let rec print_path path nav =
+  let rec print_path path {Nav. title; body; nav} =
     let path, tree = filter_path path tree in
-    path_selector path (Nav.title nav) (path_action nav);
-    let wmonths = sub (Nav.body nav) in
-    let wtree = Tree.make (Nav.body nav) in
+    path_selector path title (path_action nav);
+    let wmonths = sub body in
+    let wtree = Tree.make body in
     print_months wmonths (months tree) @@ fun month ->
     Tree.clear wtree;
     let tree = filter_time (time_of month) tree in
@@ -306,7 +309,7 @@ let main ~args:_ ~set_title cursor =
     print_node wtree tree path (path_action nav)
 
   and path_action nav path =
-    Nav.modal nav "" (print_path path)
+    Nav.push nav "" (print_path path)
   in
   let path =
     try
@@ -319,6 +322,6 @@ let main ~args:_ ~set_title cursor =
       "" :: "" :: aux [] (Sys.getenv "HOME")
     with Not_found -> []
   in
-  Nav.make cursor "" (print_path path)
+  Nav.render (Nav.make "" (print_path path)) cursor
 
-let () = Sturgeon.Recipes.text_command main
+let () = Sturgeon_recipes_command.text_command main

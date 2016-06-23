@@ -1,4 +1,4 @@
-export PACKS = unix grenier.hll sturgeon
+export PACKS = unix grenier.hll inuit sturgeon sturgeon.recipes_command
 
 define PROJ_timetrail
   SOURCES = common.ml timetrail.ml
