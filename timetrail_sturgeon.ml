@@ -5,7 +5,7 @@ open Widget
 
 module Time_tree : sig
   type 'a t = private {
-    name     : 'a;
+    label    : 'a;
     time_min : float;
     time_max : float;
     entries  : entry list;
@@ -14,13 +14,13 @@ module Time_tree : sig
   val make : 'a -> entry list -> 'a t list -> 'a t
 end = struct
   type 'a t = {
-    name     : 'a;
+    label     : 'a;
     time_min : float;
     time_max : float;
     entries  : entry list;
     children : 'a t list;
   }
-  let make name entries children =
+  let make label entries children =
     let minmax_entry (t_min, t_max) entry =
       min t_min entry.time, max t_max entry.time
     and minmax_tree (t_min, t_max) tree =
@@ -30,13 +30,15 @@ end = struct
     let time_minmax = List.fold_left minmax_entry time_minmax entries in
     let time_minmax = List.fold_left minmax_tree time_minmax children in
     let time_min, time_max = time_minmax in
-    { name; time_min; time_max; entries; children }
+    { label; time_min; time_max; entries; children }
 end
 open Time_tree
 
+type cell = { name : string; opened : bool ref }
+
 let make_tree l =
   let rec subtree offset name = function
-    | [] -> Time_tree.make (name, ref false) [] []
+    | [] -> Time_tree.make { name; opened = ref false } [] []
     | (x :: _) as all ->
       let table = Hashtbl.create 7 in
       let entries = ref [] in
@@ -45,20 +47,22 @@ let make_tree l =
         | l :: ls ->
           begin match String.index_from l.text offset '/' with
             | n ->
-              key table (n+1, String.sub l.text offset (n - offset)) +:= l
+              let k = key table (n+1, String.sub l.text offset (n - offset)) in
+              k := l :: !k
             | exception Not_found ->
-              entries +:= l
+              let l = {l with text = String.sub l.text offset (String.length l.text - offset) } in
+              entries := l :: !entries
           end;
           aux ls
       in
       aux all;
       let children = Hashtbl.fold
-          (fun (offset, name) subentries children ->
-             subtree offset name !subentries :: children)
+          (fun (offset, label) subentries children ->
+             subtree offset label !subentries :: children)
           table []
       and entries = !entries in
-      Time_tree.make (name, ref false) entries
-        (List.sort (fun t1 t2 -> compare t1.name t2.name) children)
+      Time_tree.make { name; opened = ref false } entries
+        (List.sort (fun t1 t2 -> compare t1.label t2.label) children)
   in
   subtree 0 "" l
 
@@ -145,45 +149,44 @@ let string_of_time_spent s =
   let h = m / 60 in
   Printf.sprintf "%02d:%02d" h (m mod 60)
 
-let rec annotate counter0 offset0 tree =
+let rec annotate counter0 tree =
   let counter = Counter.create () in
   List.iter (fun entry ->
       Counter.add counter entry.time)
     tree.entries;
   let local = Counter.estimate counter in
-  let offset = offset0 + String.length (fst tree.name) + 1 in
-  let children = List.map (annotate counter offset) tree.children in
+  let children = List.map (annotate counter) tree.children in
   let total = Counter.estimate counter in
   Counter.merge ~into:counter0 counter;
-  Time_tree.make (tree.name, offset, local, total) tree.entries children
+  Time_tree.make (tree.label, local, total) tree.entries children
 
-let annotate path tree =
-  let offset =
-    match List.rev path with
-    | x :: xs -> String.length (String.concat "/" xs)
-    | [] -> -1
-  in
-  annotate (Counter.create ()) offset tree
+let annotate tree =
+  annotate (Counter.create ()) tree
 
 let rec print_node action ui path tree =
   let render ui' =
-    let ((name, _), offset, local, total) = tree.name in
-    let path = name :: path in
-    List.iter (fun entry ->
-        Cursor.text (Widget.Tree.add ui') @@
-        if offset = 0 then entry.text else
-          let len = String.length entry.text in
-          String.sub entry.text offset (len - offset)
-      )
-      (List.sort_uniq compare_entry_text_only tree.entries);
-    if tree.entries <> [] && tree.children <> [] then
-      printf (Widget.Tree.add ui')
-        "⌛ spent %s %s"
+    let (cell, local, total) = tree.label in
+    let path = cell.name :: path in
+    if tree.entries <> [] then (
+      let render_entries ui' =
+        List.iter
+          (fun entry -> Cursor.text (Widget.Tree.add ui') entry.text)
+          (List.sort_uniq compare_entry_text_only tree.entries)
+      in
+      let entries =
+        if tree.children = [] then
+          (render_entries ui'; None)
+        else
+          (Some render_entries)
+      in
+      printf (Widget.Tree.add ?children:entries ui')
+        "⌛ local files: spent %s %s"
         (string_of_time_spent local)
         (string_of_entries_time tree.entries);
+    );
     List.iter (print_node action ui' path) tree.children;
   in
-  let ((name, opened), offset, local, total) = tree.name in
+  let ({name; opened}, local, total) = tree.label in
   let node = Tree.add ui ~opened ~children:render in
   link node "%s" name (fun _ -> action (List.rev (name :: path)));
   printf node "(spent %s %s)"
@@ -191,11 +194,6 @@ let rec print_node action ui path tree =
     (string_of_tree_time tree)
 
 let print_node ui tree path action =
-  (*let rec aux = function
-    | { entries = []; children = [tree] } -> aux tree
-    | tree -> print_node action ui tree
-  in
-    aux*)
   print_node action ui (List.rev path) tree
 
 let months t =
@@ -260,7 +258,7 @@ let filter_time (min,max) =
     let entries = List.filter filter_entry tree.entries in
     let children = List.filter filter_children tree.children in
     let children = List.map filter_tree children in
-    Time_tree.make tree.name entries children
+    Time_tree.make tree.label entries children
   in
   filter_tree
 
@@ -268,12 +266,12 @@ let filter_path path tree =
   let rec aux acc tree = function
     | [] -> List.rev acc, tree
     | x :: xs ->
-      match List.find (fun e -> fst e.name = x) tree.children with
+      match List.find (fun e -> e.label.name = x) tree.children with
       | tree -> aux (x :: acc) tree xs
       | exception Not_found -> List.rev acc, tree
   in
   match path with
-  | x :: xs when fst tree.name = x ->
+  | x :: xs when tree.label.name = x ->
     aux [x] tree xs
   | _ -> [], tree
 
@@ -304,8 +302,8 @@ let main ~args:_ shell =
     print_months wmonths (months tree) @@ fun month ->
     Tree.clear wtree;
     let tree = filter_time (time_of month) tree in
-    snd tree.name := true;
-    let tree = annotate path tree in
+    tree.label.opened := true;
+    let tree = annotate tree in
     print_node wtree tree path (path_action nav)
 
   and path_action nav path =
