@@ -2,7 +2,10 @@ let s:cmdcount = strftime("%s") % 300
 
 function! timetrail#log(p)
   if ((!exists("b:timetrail_tick") || b:timetrail_tick != b:changedtick) && (a:p != ""))
+    let l:autowrite = &autowrite
+    set noautowrite
     execute "silent ! timetrail-log " . shellescape(a:p, 1)
+    let &autowrite = l:autowrite
     let b:timetrail_tick = b:changedtick
 
     let s:cmdcount += 1
