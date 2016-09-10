@@ -75,7 +75,7 @@ type entry = {
 }
 
 let rec load_entries filter ic acc =
-  match Scanf.fscanf ic "%f\t%s\n" (fun time text -> {time; text}) with
+  match Scanf.bscanf ic "%f\t%S\n" (fun time text -> {time; text}) with
   | entry when filter entry -> load_entries filter ic (entry :: acc)
   | _ -> load_entries filter ic acc
   | exception End_of_file -> acc
@@ -84,7 +84,7 @@ let load_entries ?(filter=fun _ -> true) ic acc =
   load_entries filter ic acc
 
 let save_entry oc entry =
-  Printf.fprintf oc "%0.0f\t%s\n" entry.time entry.text
+  Printf.fprintf oc "%0.0f\t%S\n" entry.time entry.text
 
 let save_entries oc entries =
   List.iter (save_entry oc) entries

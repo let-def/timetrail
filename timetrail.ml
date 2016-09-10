@@ -73,9 +73,9 @@ let rec loadinput path acc =
         (fun acc file -> loadinput (Filename.concat path file) acc)
         acc (Sys.readdir path)
     else
-      let ic = open_in path in
+      let ic = Scanf.Scanning.from_file path in
       protect (fun () -> load_entries ~filter:pass_filter ic acc)
-        ~finally:(fun () -> close_in_noerr ic)
+        ~finally:(fun () -> Scanf.Scanning.close_in ic)
   with exn ->
     Printf.eprintf "Couldn't load %s: %s\n"
       path (Printexc.to_string exn);

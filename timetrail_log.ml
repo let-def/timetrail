@@ -7,10 +7,8 @@ let trail_channel =
   attempt ("open trail file " ^ trail_path) @@ fun () ->
   open_out_gen [Open_creat; Open_append] 0o660 trail_path
 
-let stamp = Printf.sprintf "%0.0f\t" launch_time
-
 let process arg =
-  let line = stamp ^ String.escaped arg ^ "\n" in
+  let line = Printf.sprintf "%0.0f\t%S\n" launch_time arg in
   output_string trail_channel line
 
 let () =

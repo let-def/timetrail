@@ -73,9 +73,9 @@ let rec loadinput path acc =
         (fun acc file -> loadinput (Filename.concat path file) acc)
         acc (Sys.readdir path)
     else
-      let ic = open_in path in
+      let ic = Scanf.Scanning.open_in path in
       protect (fun () -> load_entries ic acc)
-        ~finally:(fun () -> close_in_noerr ic)
+        ~finally:(fun () -> Scanf.Scanning.close_in ic)
   with exn ->
     Printf.eprintf "Couldn't load %s: %s\n"
       path (Printexc.to_string exn);
@@ -163,7 +163,7 @@ let rec annotate counter0 tree =
 let annotate tree =
   annotate (Counter.create ()) tree
 
-let rec print_node action ui path tree =
+let rec print_node path_action ui path tree =
   let render ui' =
     let (cell, local, total) = tree.label in
     let path = cell.name :: path in
@@ -184,11 +184,11 @@ let rec print_node action ui path tree =
         (string_of_time_spent local)
         (string_of_entries_time tree.entries);
     );
-    List.iter (print_node action ui' path) tree.children;
+    List.iter (print_node path_action ui' path) tree.children;
   in
   let ({name; opened}, local, total) = tree.label in
   let node = Tree.add ui ~opened ~children:render in
-  link node "%s" name (fun _ -> action (List.rev (name :: path)));
+  link node "%s" name (fun _ -> path_action (List.rev (name :: path)));
   printf node "(spent %s %s)"
     (string_of_time_spent total)
     (string_of_tree_time tree)

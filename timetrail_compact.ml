@@ -16,10 +16,10 @@ let filter_entries l =
 let process_path p =
   let ic =
     attempt ("open trail file for input " ^ p) @@ fun () ->
-    open_in p
+    Scanf.Scanning.open_in p
   in
   let entries = load_entries ic [] in
-  close_in_noerr ic;
+  Scanf.Scanning.close_in ic;
   let entries = filter_entries entries in
   let oc =
     attempt ("open trail file for output " ^ p) @@ fun () ->
